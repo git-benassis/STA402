@@ -99,7 +99,7 @@ def plot_train_test(vol_train, vol_test, title='Volume SPY Train vs Test'):
 
 # Graphic representation of train/test split
 # plot_train_test(vol_train, vol_test)
-# plot_train_test(log_vol_train, log_vol_test, title='Log Volume SPY Train vs Test')
+plot_train_test(log_vol_train, log_vol_test, title='Log Volume SPY Train vs Test')
 
 # Value distribution
 
@@ -109,7 +109,7 @@ def plot_distribution(series, title='Distribution', x_title='Value', y_title='Fr
     fig.update_layout(title=title, xaxis_title=x_title, yaxis_title=y_title, template='plotly_white')
     fig.show()
 
-plot_distribution(spy_vol, title='Distribution of SPY Daily Volume', x_title='Volume', y_title='Frequency')
+# plot_distribution(spy_vol, title='Distribution of SPY Daily Volume', x_title='Volume', y_title='Frequency')
 plot_distribution(log_vol, title='Distribution of SPY Daily Log Volume', x_title='Log Volume', y_title='Frequency')
 
 # ACF and PACF
@@ -122,16 +122,22 @@ pacf_vals_log = pacf(log_vol_train, nlags=lags)
 
 # plot_data(list(range(lags + 1)),acf_vals,'lines+markers','ACF',"ACF of SPY dayly Volume","Lag","ACF")
 # plot_data(list(range(lags + 1)),pacf_vals,'lines+markers','PACF',"PACF of SPY dayly Volume","Lag","PACF")
-# plot_data(list(range(lags + 1)),acf_vals_log,'lines+markers','ACF',"ACF of SPY dayly Log Volume","Lag","ACF")
-# plot_data(list(range(lags + 1)),pacf_vals_log,'lines+markers','PACF',"PACF of SPY dayly Log Volume","Lag","PACF")
+plot_data(list(range(lags + 1)),acf_vals_log,'lines+markers','ACF',"ACF of SPY dayly Log Volume","Lag","ACF")
+plot_data(list(range(lags + 1)),pacf_vals_log,'lines+markers','PACF',"PACF of SPY dayly Log Volume","Lag","PACF")
 
 # moyenne mobile
 vol_lisse = vol_train.rolling(window=21).mean() # rolling mean over 1 month
+log_vol_lisse = log_vol_train.rolling(window=21).mean() # rolling mean over 1 month
+
 # plot_data(vol_lisse.index,vol_lisse.values,'lines','Smoothed Volume',"Smoothed SPY dayly Volume (monthly rolling mean)","Datetime","Smoothed Volume")
+plot_data(log_vol_lisse.index,log_vol_lisse.values,'lines','Smoothed Log Volume',"Smoothed SPY dayly Log Volume (monthly rolling mean)","Datetime","Smoothed Log Volume")
 
 # différentiation
 vol_diff = vol_train.diff() # first order differentiation
+log_vol_diff = log_vol_train.diff() # first order differentiation
+
 # plot_data(vol_diff.index,vol_diff.values,'lines','Differenced Volume',"Differenced SPY dayly Volume","Datetime","Differenced Volume")
+plot_data(log_vol_diff.index,log_vol_diff.values,'lines','Differenced Log Volume',"Differenced SPY dayly Log Volume","Datetime","Differenced Log Volume")
 
 # Seasonal Observation
 def seasonal_cobweb(series, freq="month", title="Seasonality Cobweb"):
@@ -191,11 +197,18 @@ def seasonal_cobweb(series, freq="month", title="Seasonality Cobweb"):
 # seasonal_cobweb(spy_vol, freq="month", title="Seasonality Cobweb - Monthly")
 # seasonal_cobweb(spy_vol, freq="dayofweek", title="Seasonality Cobweb - Day of Week")
 # seasonal_cobweb(spy_vol, freq="week", title="Seasonality Cobweb - Week of Year")
+# seasonal_cobweb(log_vol, freq="month", title="Seasonality Cobweb - Monthly (Log Volume)")
+# seasonal_cobweb(log_vol, freq="dayofweek", title="Seasonality Cobweb - Day of Week (Log Volume)")
+# seasonal_cobweb(log_vol, freq="week", title="Seasonality Cobweb - Week of Year (Log Volume)")
+
 
 # Trend observation and estimation
 
 vol_trend = spy_vol.rolling(window=252).mean() # rolling mean over 1 year
+log_vol_trend = log_vol.rolling(window=252).mean() # rolling mean over 1 year
+
 # plot_data(vol_trend.index,vol_trend.values,'lines','Trend Volume',"SPY Volume - Trend (252-day rolling mean)","Datetime","Volume")
+plot_data(log_vol_trend.index,log_vol_trend.values,'lines','Trend Log Volume',"SPY Log Volume - Trend (252-day rolling mean)","Datetime","Log Volume")
 
 # Lissage exponentiel simple 
 alpha=0.9
