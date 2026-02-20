@@ -14,9 +14,7 @@ from sklearn.metrics import mean_squared_error
 save_path ="SPY_daily.csv"
 #spy.to_csv(save_path)
 spy = pd.read_csv(save_path, index_col=0, parse_dates=True)
-print(spy.head())
-
-# Data treatment
+# print(spy.head())
 
 # Printing data function
 def plot_data(x,y,mode,name,title,x_title,y_title):
@@ -36,19 +34,28 @@ def plot_data(x,y,mode,name,title,x_title,y_title):
     fig.show()
     return(0)
 
+# Data treatment
+# Extract Volume Data
+
+spy_vol = spy["Volume"].squeeze()
+# print(spy_vol.head())
+# plot_data(spy_vol.index,spy_vol.values,'lines+markers','Volume',"SPY dayly Volume","Datetime","Volume")
+
+log_vol = np.log(spy_vol)
+# print(log_vol.head())
+plot_data(spy_vol.index, log_vol.values,'lines','Log Volume',"SPY dayly Log Volume","Datetime","Log Volume")
+
 def evaluation_model(y_test,y_pred):
     rmse=mean_squared_error(y_test,y_pred)
     res=np.mean(y_test-y_pred)
     diff_acf=acf(y_test-y_pred)
     return rmse,res,diff_acf
-    
-# Extract Volume Data
-spy_vol = spy["Volume"].squeeze()
-print(spy_vol.head()) 
 
 #Split train/test Time Series
-vol_train=spy_vol['2020-12-31':'2023-12-31'] # Keep only a small part of the data for training (old data is irrelevant)
-vol_test=spy_vol['2024-01-01':] # Trying to predict the last two years (seems a bit too long)
+vol_train=spy_vol['2020-12-31':'2024-12-31'] # Keep only a small part of the data for training (old data is irrelevant)
+vol_test=spy_vol['2025-01-01':] # Trying to predict the last two years (seems a bit too long)
+log_vol_train=log_vol['2020-12-31':'2024-12-31']
+log_vol_test=log_vol['2025-01-01':]
 
 def plot_train_test(vol_train, vol_test, title='Volume SPY Train vs Test'):
     #fig = make_subplots(sizes=[1], subplot_titles=[title])
@@ -91,27 +98,40 @@ def plot_train_test(vol_train, vol_test, title='Volume SPY Train vs Test'):
     fig.show()
 
 # Graphic representation of train/test split
-plot_train_test(vol_train, vol_test)
+# plot_train_test(vol_train, vol_test)
+# plot_train_test(log_vol_train, log_vol_test, title='Log Volume SPY Train vs Test')
 
+# Value distribution
 
-plot_data(spy_vol.index,spy_vol.values,'lines+markers','Volume',"SPY dayly Volume","Datetime","Volume")
+def plot_distribution(series, title='Distribution', x_title='Value', y_title='Frequency'):
+    fig = go.Figure()
+    fig.add_trace(go.Histogram(x=series.values, nbinsx=50, name='Distribution', marker_color='blue'))
+    fig.update_layout(title=title, xaxis_title=x_title, yaxis_title=y_title, template='plotly_white')
+    fig.show()
+
+plot_distribution(spy_vol, title='Distribution of SPY Daily Volume', x_title='Volume', y_title='Frequency')
+plot_distribution(log_vol, title='Distribution of SPY Daily Log Volume', x_title='Log Volume', y_title='Frequency')
 
 # ACF and PACF
 # Compute ACF and PACF
 lags = 63 # equivalent to 3 months of trading days (assuming 21 trading days per month )
 acf_vals = acf(vol_train, nlags=lags)
 pacf_vals = pacf(vol_train, nlags=lags)
+acf_vals_log = acf(log_vol_train, nlags=lags)
+pacf_vals_log = pacf(log_vol_train, nlags=lags)
 
-plot_data(list(range(lags + 1)),acf_vals,'lines+markers','ACF',"ACF of SPY dayly Volume","Lag","ACF")
-plot_data(list(range(lags + 1)),pacf_vals,'lines+markers','PACF',"PACF of SPY dayly Volume","Lag","PACF")
+# plot_data(list(range(lags + 1)),acf_vals,'lines+markers','ACF',"ACF of SPY dayly Volume","Lag","ACF")
+# plot_data(list(range(lags + 1)),pacf_vals,'lines+markers','PACF',"PACF of SPY dayly Volume","Lag","PACF")
+# plot_data(list(range(lags + 1)),acf_vals_log,'lines+markers','ACF',"ACF of SPY dayly Log Volume","Lag","ACF")
+# plot_data(list(range(lags + 1)),pacf_vals_log,'lines+markers','PACF',"PACF of SPY dayly Log Volume","Lag","PACF")
 
 # moyenne mobile
 vol_lisse = vol_train.rolling(window=21).mean() # rolling mean over 1 month
-plot_data(vol_lisse.index,vol_lisse.values,'lines','Smoothed Volume',"Smoothed SPY dayly Volume (monthly rolling mean)","Datetime","Smoothed Volume")
+# plot_data(vol_lisse.index,vol_lisse.values,'lines','Smoothed Volume',"Smoothed SPY dayly Volume (monthly rolling mean)","Datetime","Smoothed Volume")
 
 # différentiation
 vol_diff = vol_train.diff() # first order differentiation
-plot_data(vol_diff.index,vol_diff.values,'lines','Differenced Volume',"Differenced SPY dayly Volume","Datetime","Differenced Volume")
+# plot_data(vol_diff.index,vol_diff.values,'lines','Differenced Volume',"Differenced SPY dayly Volume","Datetime","Differenced Volume")
 
 # Seasonal Observation
 def seasonal_cobweb(series, freq="month", title="Seasonality Cobweb"):
@@ -168,53 +188,14 @@ def seasonal_cobweb(series, freq="month", title="Seasonality Cobweb"):
 
     fig.show()
 
-seasonal_cobweb(spy_vol, freq="month", title="Seasonality Cobweb - Monthly")
-seasonal_cobweb(spy_vol, freq="dayofweek", title="Seasonality Cobweb - Day of Week")
-seasonal_cobweb(spy_vol, freq="week", title="Seasonality Cobweb - Week of Year")
+# seasonal_cobweb(spy_vol, freq="month", title="Seasonality Cobweb - Monthly")
+# seasonal_cobweb(spy_vol, freq="dayofweek", title="Seasonality Cobweb - Day of Week")
+# seasonal_cobweb(spy_vol, freq="week", title="Seasonality Cobweb - Week of Year")
 
 # Trend observation and estimation
 
 vol_trend = spy_vol.rolling(window=252).mean() # rolling mean over 1 year
-plot_data(vol_trend.index,vol_trend.values,'lines','Trend Volume',"SPY Volume - Trend (252-day rolling mean)","Datetime","Volume")
-
-# # estimation de la tendance
-# x_num = np.arange(len(spy_vol.dropna()))  # Index numérique pour régression
-# y_clean = spy_vol.dropna().values
-
-# coeff = np.polyfit(x_num, y_clean, 100)  # régression par polynome de degré 100
-# p_trend = np.poly1d(coeff)
-# y_trend = p_trend(x_num)
-
-# def plot_data_trend(x, y, x_trend, y_trend, mode, name_data, name_trend, title, x_title, y_title):
-#     fig = go.Figure()
-#     fig.add_trace(go.Scatter(x=x, y=y, mode=mode, name=name_data))
-#     fig.add_trace(go.Scatter(x=x_trend, y=y_trend, mode='lines', name=name_trend, line=dict(color='red', width=3)))
-#     fig.update_layout(title=title, xaxis_title=x_title, yaxis_title=y_title, hovermode="x unified")
-#     fig.show()
-#     return 0
-
-# # Appel
-# plot_data_trend(spy_vol.index[1:], y_clean, spy_vol.index[1:], y_trend, 'lines+markers', 'Differenced Volume', 'Tendance linéaire', "SPY Volume Diff + Tendance", "Datetime", "Volume Diff")
-
-# # Moyenne mobile en prenant en compte la saisonnalité
-# # Période saisonnière (ex: 26 périodes 15min = 6h30, 1/2 session trading)
-# period_saison = 26  
-
-# # Moyenne mobile saisonnière (sur 1 cycle complet)
-# vol_saison = spy_vol.rolling(window=period_saison, center=True).mean()
-
-# # Composante saisonnière = moyenne mobile sur la période
-
-# # Données désaisonnalisées
-# vol_desaisson = spy_vol - vol_saison
-
-# # Visualisation avec votre fonction
-# plot_data(spy_vol.index, vol_saison.values, 'lines', 'Saisonnalité', 
-#            "SPY Volume - Composante Saisonnière (MM 26p)", "Datetime", "Volume")
-           
-# plot_data(spy_vol.index, vol_desaisson.values, 'lines', 'Désaisonnalisé', 
-#            "SPY Volume - Données Désaisonnalisées", "Datetime", "Volume Désaison.")
-
+# plot_data(vol_trend.index,vol_trend.values,'lines','Trend Volume',"SPY Volume - Trend (252-day rolling mean)","Datetime","Volume")
 
 # Lissage exponentiel simple 
 alpha=0.9
