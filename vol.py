@@ -8,9 +8,9 @@ from statsmodels.tsa.seasonal import STL
 from sklearn.model_selection import train_test_split #pour séparer données train/test
 from sklearn.metrics import mean_squared_error
 
-# Download data
+# Download and load data
 
-#spy = yf.download("SPY", interval="15m", period="max")
+#spy = yf.download("SPY", interval="1d", period="max")
 save_path ="SPY_daily.csv"
 #spy.to_csv(save_path)
 spy = pd.read_csv(save_path, index_col=0, parse_dates=True)
@@ -42,13 +42,13 @@ def evaluation_model(y_test,y_pred):
     diff_acf=acf(y_test-y_pred)
     return rmse,res,diff_acf
     
-# Volume data
+# Extract Volume Data
 spy_vol = spy["Volume"].squeeze()
 print(spy_vol.head()) 
 
-vol_train=spy_vol['2020-12-31':'2023-12-31']
-vol_test=spy_vol['2024-01-01':]
-
+#Split train/test Time Series
+vol_train=spy_vol['2020-12-31':'2023-12-31'] # Keep only a small part of the data for training (old data is irrelevant)
+vol_test=spy_vol['2024-01-01':] # Trying to predict the last two years (seems a bit too long)
 
 def plot_train_test(vol_train, vol_test, title='Volume SPY Train vs Test'):
     #fig = make_subplots(sizes=[1], subplot_titles=[title])
@@ -90,29 +90,92 @@ def plot_train_test(vol_train, vol_test, title='Volume SPY Train vs Test'):
     
     fig.show()
 
-# Utilisation directe
+# Graphic representation of train/test split
 plot_train_test(vol_train, vol_test)
 
 
-#plot_data(spy_vol.index,spy_vol.values,'lines+markers','Volume',"SPY Intraday Volume (30-min)","Datetime","Volume")
+plot_data(spy_vol.index,spy_vol.values,'lines+markers','Volume',"SPY dayly Volume","Datetime","Volume")
 
-#ACF and PACF
+# ACF and PACF
 # Compute ACF and PACF
-# lags = 60
-# acf_vals = acf(vol_train, nlags=lags)
-# pacf_vals = pacf(vol_train, nlags=lags)
+lags = 63 # equivalent to 3 months of trading days (assuming 21 trading days per month )
+acf_vals = acf(vol_train, nlags=lags)
+pacf_vals = pacf(vol_train, nlags=lags)
 
-# plot_data(list(range(lags + 1)),acf_vals,'lines+markers','ACF',"ACF of SPY Intraday Volume","Lag","ACF")
-# plot_data(list(range(lags + 1)),pacf_vals,'lines+markers','PACF',"PACF of SPY Intraday Volume","Lag","PACF")
+plot_data(list(range(lags + 1)),acf_vals,'lines+markers','ACF',"ACF of SPY dayly Volume","Lag","ACF")
+plot_data(list(range(lags + 1)),pacf_vals,'lines+markers','PACF',"PACF of SPY dayly Volume","Lag","PACF")
 
-# # moyenne mobile
-# vol_lisse = vol_train.rolling(window=22).mean()
-# plot_data(vol_lisse.index,vol_lisse.values,'lines','Smoothed Volume',"Smoothed SPY Intraday Volume (30-day rolling mean)","Datetime","Smoothed Volume")
+# moyenne mobile
+vol_lisse = vol_train.rolling(window=21).mean() # rolling mean over 1 month
+plot_data(vol_lisse.index,vol_lisse.values,'lines','Smoothed Volume',"Smoothed SPY dayly Volume (monthly rolling mean)","Datetime","Smoothed Volume")
 
-# # différentiation
-# vol_diff = vol_train.diff()
-# plot_data(vol_diff.index,vol_diff.values,'lines','Differenced Volume',"Differenced SPY Intraday Volume","Datetime","Differenced Volume")
+# différentiation
+vol_diff = vol_train.diff() # first order differentiation
+plot_data(vol_diff.index,vol_diff.values,'lines','Differenced Volume',"Differenced SPY dayly Volume","Datetime","Differenced Volume")
 
+# Seasonal Observation
+def seasonal_cobweb(series, freq="month", title="Seasonality Cobweb"):
+    """
+    series : pd.Series with DatetimeIndex
+    freq   : "month", "dayofweek", "week", "hour"
+    """
+
+    if not isinstance(series.index, pd.DatetimeIndex):
+        raise ValueError("Series must have a DatetimeIndex")
+
+    # ---- Aggregation depending on frequency ----
+    if freq == "month":
+        grouped = series.groupby(series.index.month).mean()
+        labels = ["Jan","Feb","Mar","Apr","May","Jun",
+                  "Jul","Aug","Sep","Oct","Nov","Dec"]
+
+    elif freq == "dayofweek":
+        grouped = series.groupby(series.index.dayofweek).mean()
+        labels = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+
+    elif freq == "week":
+        grouped = series.groupby(series.index.isocalendar().week).mean()
+        labels = grouped.index.astype(str)
+
+    elif freq == "hour":
+        grouped = series.groupby(series.index.hour).mean()
+        labels = grouped.index.astype(str)
+
+    else:
+        raise ValueError("freq must be: month, dayofweek, week, hour")
+
+    values = grouped.values
+
+    # Close the loop
+    values = np.append(values, values[0])
+    labels = list(labels) + [labels[0]]
+
+    # ---- Plotly Radar ----
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatterpolar(
+        r=values,
+        theta=labels,
+        fill='toself',
+        name="Mean"
+    ))
+
+    fig.update_layout(
+        polar=dict(radialaxis=dict(visible=True)),
+        title=title,
+        showlegend=False
+    )
+
+    fig.show()
+
+seasonal_cobweb(spy_vol, freq="month", title="Seasonality Cobweb - Monthly")
+seasonal_cobweb(spy_vol, freq="dayofweek", title="Seasonality Cobweb - Day of Week")
+seasonal_cobweb(spy_vol, freq="week", title="Seasonality Cobweb - Week of Year")
+
+# Trend observation and estimation
+
+vol_trend = spy_vol.rolling(window=252).mean() # rolling mean over 1 year
+plot_data(vol_trend.index,vol_trend.values,'lines','Trend Volume',"SPY Volume - Trend (252-day rolling mean)","Datetime","Volume")
 
 # # estimation de la tendance
 # x_num = np.arange(len(spy_vol.dropna()))  # Index numérique pour régression
@@ -186,8 +249,6 @@ holt_pred = holt_forecast(vol_train, len(vol_test), alpha, beta)
 
 # Usage
 
-
-
 def plot_predictions(vol_test, predictions_list, pred_names, title='Prédictions Volume SPY Test'):
     """
     vol_test: données test réelles (pd.Series)
@@ -230,5 +291,5 @@ prediction_names=[f"lissage de Holt Winters, alpha={alpha} et beta={beta}"]
 plot_predictions(vol_test,prediction_list,prediction_names)
 erreur_quadratique, res, diff_acf = evaluation_model(vol_test,holt_pred)
 print(erreur_quadratique,res)
-plot_data(diff_acf)
+# plot_data(diff_acf)
 # il faut maintenant comparer avec la courbe réelle pour voir si les prédictions sont bonnes 
