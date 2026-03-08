@@ -17,7 +17,7 @@ def plot_data(x,y,mode,name,title,x_title,y_title):
         hovermode="x unified"
     )
     fig.show()
-    return fig
+
 
 def plot_distribution(series, title='Distribution', x_title='Value', y_title='Frequency'):
     fig = go.Figure()

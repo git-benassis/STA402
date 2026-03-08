@@ -3,6 +3,8 @@ import pandas as pd
 from prophet import Prophet
 from sklearn.metrics import mean_squared_error
 from statsmodels.tsa.arima.model import ARIMA, sarimax
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+from statsmodels.tsa.stattools import arma_order_select_ic
 
 def arima_forecast(train:pd.Series, test:pd.Series, order=(1,1,1)):
     model = ARIMA(train, order=order)
@@ -39,3 +41,15 @@ def exogenous_forecast(train:pd.Series, test:pd.Series, exog_train:pd.DataFrame,
     model_fit = model.fit()
     forecast = model_fit.forecast(steps=len(test), exog=exog_test)
     return forecast
+
+def holt_forecast(train: pd.Series, test: pd.Series, trend='add', seasonal=None, seasonal_periods=5):    
+    model = ExponentialSmoothing(
+        train,
+        trend=trend,                
+        seasonal=seasonal,             
+        seasonal_periods=seasonal_periods
+    )
+    model_fit = model.fit()
+    forecast = model_fit.forecast(steps=len(test))
+    return forecast
+

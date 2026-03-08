@@ -79,3 +79,6 @@ def compute_exogenous_variables(df:pd.DataFrame):
     exog = exog.dropna()
 
     return exog
+
+def remove_seasonality(ts: pd.Series, period=5):
+    return ts.diff(periods=period).dropna()
