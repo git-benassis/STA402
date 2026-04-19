@@ -1,0 +1,1 @@
+Afin de lancer le programme et que les résultats s'affichent, il suffit de lancer le main. 
