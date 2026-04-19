@@ -1,2 +1,3 @@
 # Projet de prédiction du volume du SPY par analyse de séries temporelles
-[Voir le rapport](Benassis_Helpiquet.pdf)
+
+Le rapport complet est disponible ici : [Benassis_Helpiquet.pdf](Benassis_Helpiquet.pdf)
